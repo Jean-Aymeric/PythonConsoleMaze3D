@@ -1,6 +1,6 @@
 VERTICAL_WALL_EDGE = "|"
 VERTICAL_WALL = "'"
-CENTER_GROUND = "_"
+CENTER_GROUND = "-"
 RIGHT_GROUND = "\\"
 LEFT_GROUND = "/"
 CENTER_ROOF = "_"
@@ -11,19 +11,15 @@ NORTH = 0
 EAST = 1
 SOUTH = 2
 WEST = 3
-SQUARE_SIZES = [6, 6, 4, 2]
+SQUARE_SIZES = [5, 9, 7, 5, 4, 3]
 
-FIRST_SQUARES_SIZE = 5
-SECOND_SQUARES_SIZE = 6
-THIRD_SQUARES_SIZE = 4
-FOURTH_SQUARES_HEIGHT = 2
-SCREEN_HEIGHT = (FIRST_SQUARES_SIZE + SECOND_SQUARES_SIZE + THIRD_SQUARES_SIZE + FOURTH_SQUARES_HEIGHT) * 2
-SCREEN_WIDTH = int(SCREEN_HEIGHT * 1.3)
+SCREEN_HEIGHT = sum(SQUARE_SIZES) * 2 + 1
+SCREEN_WIDTH = int(SCREEN_HEIGHT * 1.1)
 
 MAZE_WIDTH = 21
-MAZE_HEIGHT = 21
+MAZE_HEIGHT = 11
 myMaze = [[False] * MAZE_WIDTH for _ in range(MAZE_HEIGHT)]
-myHero = [1, 1, 2]  # [y, x, direction]
+myHero = [1, 3, 1]  # [y, x, direction]
 
 
 def buildMaze(maze):
@@ -31,7 +27,7 @@ def buildMaze(maze):
         for column in range(MAZE_WIDTH):
             if (row == 0) or (row == MAZE_HEIGHT - 1) or (column == 0) or (column == MAZE_WIDTH - 1):
                 maze[row][column] = True
-            if (row % 2 == 0) and (column % 2 == 0):
+            if (row % 3 == 0) and (column % 3 == 0):
                 maze[row][column] = True
 
 
@@ -49,10 +45,8 @@ def displayMaze2D(maze, hero):
 
 def displayMaze3D(maze, hero):
     screen = createEmptyScreen()
-    addSquaresByDistanceInScreen(hero, maze, screen, 1)
-    addSquaresByDistanceInScreen(hero, maze, screen, 0)
-    # addSquaresByDistanceInScreen(hero, maze, screen, 2)
-    # addSquaresByDistanceInScreen(hero, maze, screen, 3)
+    for distance in range(len(SQUARE_SIZES) - 1, -1, -1):
+        addSquaresByDistanceInScreen(hero, maze, screen, distance)
     printScreen(screen)
 
 
@@ -61,62 +55,75 @@ def createEmptyScreen():
 
 
 def addSquaresByDistanceInScreen(hero, maze, screen, distance):
+    if (distance > 1) and getSquareOfPositionRelativeToHero(hero, maze, 0, 1):
+        return
     leftSquareIsAWall = getSquareOfPositionRelativeToHero(hero, maze, -1, distance)
     frontSquareIsAWall = getSquareOfPositionRelativeToHero(hero, maze, 0, distance)
     rightSquareIsAWall = getSquareOfPositionRelativeToHero(hero, maze, 1, distance)
     squareSize = getSquareSizeByDistance(distance)
-    previousSquareSizes = getPreviousSquareSizeByDistance(distance)
-    previousSquareSize = getSquareSizeByDistance(distance - 1)
+    previousSquareTotalSize = getPreviousSquareTotalSizeByDistance(distance)
+
     if leftSquareIsAWall:
-        for i in range(squareSize):
-            for j in range(previousSquareSizes + i, SCREEN_HEIGHT - previousSquareSizes - i):
-                screen[j][previousSquareSizes + i] = VERTICAL_WALL_EDGE if (
-                        (i == 0) or (i == squareSize-1)) else VERTICAL_WALL
-        for i in range(previousSquareSizes):
-            screen[previousSquareSizes - 1][i] = CENTER_ROOF
-            for j in range(previousSquareSizes, SCREEN_HEIGHT - previousSquareSizes - 1):
-                screen[j][previousSquareSizes - previousSquareSize + i] = VERTICAL_WALL
+        if previousSquareTotalSize != 0:
+            for i in range(previousSquareTotalSize, SCREEN_HEIGHT - previousSquareTotalSize):
+                screen[i][previousSquareTotalSize - 1] = VERTICAL_WALL_EDGE
+        for j in range(1, squareSize):
+            for i in range(previousSquareTotalSize + j, SCREEN_HEIGHT - previousSquareTotalSize - j):
+                screen[i][previousSquareTotalSize - 1 + j] = VERTICAL_WALL
+        for j in range(previousSquareTotalSize, SCREEN_HEIGHT - previousSquareTotalSize - 1):
+            for i in range(previousSquareTotalSize - 1):
+                screen[j][i] = VERTICAL_WALL
+        for i in range(previousSquareTotalSize):
+            screen[previousSquareTotalSize - 1][i] = CENTER_ROOF
+
     if rightSquareIsAWall:
-        for i in range(squareSize):
-            for j in range(previousSquareSizes + i, SCREEN_HEIGHT - previousSquareSizes - i):
-                screen[j][SCREEN_WIDTH - previousSquareSizes - i - 1] = VERTICAL_WALL_EDGE if (
-                        (i == 0) or (i == squareSize-1)) else VERTICAL_WALL
-        for i in range(previousSquareSizes):
-            screen[previousSquareSizes - 1][SCREEN_WIDTH - i - 1] = CENTER_ROOF
-            for j in range(previousSquareSizes, SCREEN_HEIGHT - previousSquareSizes - 1):
-                screen[j][SCREEN_WIDTH - (previousSquareSizes - previousSquareSize + i) - 1] = VERTICAL_WALL
+        if previousSquareTotalSize != 0:
+            for i in range(previousSquareTotalSize, SCREEN_HEIGHT - previousSquareTotalSize):
+                screen[i][SCREEN_WIDTH - previousSquareTotalSize] = VERTICAL_WALL_EDGE
+        for j in range(1, squareSize):
+            for i in range(previousSquareTotalSize + j, SCREEN_HEIGHT - previousSquareTotalSize - j):
+                screen[i][SCREEN_WIDTH - previousSquareTotalSize - j] = VERTICAL_WALL
+        for j in range(previousSquareTotalSize, SCREEN_HEIGHT - previousSquareTotalSize - 1):
+            for i in range(previousSquareTotalSize - 1):
+                screen[j][SCREEN_WIDTH - previousSquareTotalSize + i + 1] = VERTICAL_WALL
+        for i in range(previousSquareTotalSize):
+            screen[previousSquareTotalSize - 1][SCREEN_WIDTH - i - 1] = CENTER_ROOF
+
     if frontSquareIsAWall:
-        for i in range(previousSquareSizes, SCREEN_HEIGHT - previousSquareSizes):
-            screen[i][previousSquareSizes - 1] = VERTICAL_WALL_EDGE
-            screen[i][SCREEN_WIDTH - previousSquareSizes] = VERTICAL_WALL_EDGE
-        for i in range(previousSquareSizes, SCREEN_WIDTH - previousSquareSizes):
-            screen[previousSquareSizes - 1][i] = CENTER_ROOF
+        for i in range(previousSquareTotalSize, SCREEN_HEIGHT - previousSquareTotalSize):
+            screen[i][previousSquareTotalSize - 1] = VERTICAL_WALL_EDGE
+            screen[i][SCREEN_WIDTH - previousSquareTotalSize] = VERTICAL_WALL_EDGE
+        for i in range(previousSquareTotalSize, SCREEN_WIDTH - previousSquareTotalSize):
+            screen[previousSquareTotalSize - 1][i] = CENTER_ROOF
+        for j in range(previousSquareTotalSize, SCREEN_WIDTH - previousSquareTotalSize):
+            for i in range(previousSquareTotalSize, SCREEN_HEIGHT - previousSquareTotalSize):
+                screen[i][j] = VERTICAL_WALL
     else:
-        for i in range(previousSquareSizes, previousSquareSizes + squareSize):
-            screen[SCREEN_HEIGHT - 1 - i][i] = LEFT_GROUND
-            screen[SCREEN_HEIGHT - 1 - i][SCREEN_WIDTH - 1 - i] = RIGHT_GROUND
-        for i in range(previousSquareSizes + squareSize,
-                       SCREEN_WIDTH - previousSquareSizes - squareSize):
-            screen[SCREEN_HEIGHT - previousSquareSizes - squareSize - 1][i] = CENTER_GROUND
         if leftSquareIsAWall:
-            for i in range(previousSquareSizes + squareSize,
-                           SCREEN_HEIGHT - previousSquareSizes - squareSize):
-                screen[i][previousSquareSizes + squareSize - 1] = VERTICAL_WALL_EDGE
-            for i in range(previousSquareSizes, previousSquareSizes + squareSize):
+            for i in range(previousSquareTotalSize + squareSize,
+                           SCREEN_HEIGHT - previousSquareTotalSize - squareSize):
+                screen[i][previousSquareTotalSize + squareSize - 1] = VERTICAL_WALL_EDGE
+            for i in range(previousSquareTotalSize, previousSquareTotalSize + squareSize):
                 screen[i][i] = LEFT_ROOF
         else:
-            for i in range(previousSquareSizes, previousSquareSizes + squareSize):
-                screen[SCREEN_HEIGHT - previousSquareSizes - squareSize - 1][i] = CENTER_GROUND
+            for i in range(previousSquareTotalSize, previousSquareTotalSize + squareSize):
+                screen[SCREEN_HEIGHT - previousSquareTotalSize - squareSize - 1][i] = CENTER_GROUND
         if rightSquareIsAWall:
-            for i in range(previousSquareSizes + squareSize,
-                           SCREEN_HEIGHT - previousSquareSizes - squareSize):
-                screen[i][SCREEN_WIDTH - previousSquareSizes - squareSize] = VERTICAL_WALL_EDGE
-            for i in range(previousSquareSizes, previousSquareSizes + squareSize):
+            for i in range(previousSquareTotalSize + squareSize,
+                           SCREEN_HEIGHT - previousSquareTotalSize - squareSize):
+                screen[i][SCREEN_WIDTH - previousSquareTotalSize - squareSize] = VERTICAL_WALL_EDGE
+            for i in range(previousSquareTotalSize, previousSquareTotalSize + squareSize):
                 screen[i][SCREEN_WIDTH - 1 - i] = RIGHT_ROOF
         else:
-            for i in range(previousSquareSizes, previousSquareSizes + squareSize):
-                screen[SCREEN_HEIGHT - previousSquareSizes - squareSize - 1][
+            for i in range(previousSquareTotalSize, previousSquareTotalSize + squareSize):
+                screen[SCREEN_HEIGHT - previousSquareTotalSize - squareSize - 1][
                     SCREEN_WIDTH - i - 1] = CENTER_GROUND
+        for i in range(previousSquareTotalSize + squareSize,
+                       SCREEN_WIDTH - previousSquareTotalSize - squareSize):
+            screen[SCREEN_HEIGHT - previousSquareTotalSize - squareSize - 1][i] = CENTER_GROUND
+        for i in range(previousSquareTotalSize, previousSquareTotalSize + squareSize):
+            screen[SCREEN_HEIGHT - 1 - i][i] = LEFT_GROUND
+            screen[SCREEN_HEIGHT - 1 - i][SCREEN_WIDTH - 1 - i] = RIGHT_GROUND
 
 
 def getSquareOfPositionRelativeToHero(hero, maze, x, y):
@@ -134,11 +141,8 @@ def getSquareSizeByDistance(distance):
     return SQUARE_SIZES[distance]
 
 
-def getPreviousSquareSizeByDistance(distance):
-    if distance == 0:
-        return 0
-    else:
-        return SQUARE_SIZES[distance] + getPreviousSquareSizeByDistance(distance - 1)
+def getPreviousSquareTotalSizeByDistance(distance):
+    return sum(SQUARE_SIZES[:distance])
 
 
 def printScreen(screen):
